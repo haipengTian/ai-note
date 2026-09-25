@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 小说工坊</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/"><span class="logo">墨</span>AI 小说工坊</a>
+    <div class="top-right">
+      <span class="chip" id="modelChip"></span>
+      <span class="muted small" id="usage"></span>
+    </div>
+  </header>
+  <div id="app"></div>
+
+  <!-- 后台任务面板 -->
+  <aside class="job hidden" id="job">
+    <div class="job-head">
+      <span class="dot" id="jobDot"></span>
+      <span class="job-title" id="jobTitle"></span>
+      <span class="muted small" id="jobProgress"></span>
+      <button class="btn small danger" id="jobStop">停止</button>
+      <button class="icon-btn" id="jobToggle" title="收起/展开">▾</button>
+      <button class="icon-btn" id="jobClose" title="关闭">✕</button>
+    </div>
+    <div class="job-body">
+      <div class="job-logs" id="jobLogs"></div>
+      <div class="job-stream-label muted small" id="jobStreamLabel"></div>
+      <pre class="job-stream" id="jobStream"></pre>
+    </div>
+  </aside>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="markdown.js"></script>
+  <script src="pages-characters.js"></script>
+  <script src="pages-memory.js"></script>
+  <script src="pages-inbox.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

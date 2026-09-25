@@ -1,0 +1,28 @@
+{
+  "name": "ai-novel",
+  "version": "0.3.0",
+  "description": "AI 系统化长篇小说创作网站：设定 → 人物 → 大纲 → 章节 → 记忆",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p .",
+    "serve": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "node scripts/test.mjs",
+    "mock-llm": "tsx scripts/mock-llm.ts",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

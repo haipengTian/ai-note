@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Coder</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="logo">&lt;/&gt;</span>
+        <span>AI Coder</span>
+      </div>
+      <button class="btn primary block" id="newSession">＋ 新会话</button>
+
+      <div class="section-title">会话</div>
+      <ul class="sessions" id="sessions"></ul>
+
+      <div class="section-title">
+        文件
+        <button class="icon-btn" id="refreshTree" title="刷新">⟳</button>
+      </div>
+      <div class="tree" id="tree"></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="toggleSidebar" title="菜单">☰</button>
+        <div class="meta">
+          <span class="chip" id="modelChip">…</span>
+          <span class="workspace" id="workspace" title=""></span>
+        </div>
+        <label class="switch" title="开启后，写文件和执行命令将不再询问">
+          <input type="checkbox" id="autoApprove" />
+          <span class="slider"></span>
+          <span>自动批准</span>
+        </label>
+      </header>
+
+      <section class="messages" id="messages">
+        <div class="empty" id="empty">
+          <h1>想让我做点什么？</h1>
+          <p>我可以阅读、搜索和修改当前工作区的代码，并运行命令验证。</p>
+          <div class="suggestions">
+            <button>介绍一下这个项目的结构</button>
+            <button>找出代码里可能的 bug</button>
+            <button>给这个项目补充单元测试</button>
+            <button>用 Node 写一个 hello world 并运行</button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="composer">
+        <div class="input-wrap">
+          <textarea id="input" rows="1" placeholder="描述你的需求，Enter 发送，Shift+Enter 换行"></textarea>
+          <button class="btn primary" id="send">发送</button>
+          <button class="btn danger hidden" id="stop">停止</button>
+        </div>
+        <div class="status" id="status"></div>
+      </footer>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span id="modalTitle"></span>
+        <button class="icon-btn" id="modalClose">✕</button>
+      </div>
+      <pre class="modal-body" id="modalBody"></pre>
+    </div>
+  </div>
+
+  <script src="markdown.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
