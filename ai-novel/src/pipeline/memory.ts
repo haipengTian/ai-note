@@ -1,7 +1,6 @@
 /**
  * 章后记忆：抽取 → 校验 → 应用 / 生成提案；弧完成后生成冻结摘要，攒够后合并进全书梗概。
  */
-import { config } from "../config.js";
 import { chat, chatJSON } from "../llm.js";
 import { DigestSchema } from "../model/schemas.js";
 import type { Arc, Novel } from "../model/types.js";
@@ -24,8 +23,7 @@ export async function digestChapter(id: string, index: number, job: Job) {
   if (!chapter || !text) return;
   job.log(`整理第 ${index} 章记忆（摘要、状态变化、伏笔）`);
   const d = await chatJSON(P.digestPrompt(revertChapter(n, index), chapter, text), DigestSchema, {
-    model: config.modelMemory,
-    temperature: 0.2,
+    role: "memory",
     onText: job.stream(`digest:${index}`, `第 ${index} 章记忆整理`),
     signal: job.signal,
   });
@@ -68,8 +66,7 @@ export async function summarizeArcs(id: string, job: Job, force = false) {
     job.log(`生成第 ${arc.range[0]}~${arc.range[1]} 章分段摘要`);
     const summary = (
       await chat(P.arcSummaryPrompt(n, arc, chapters), {
-        model: config.modelFast,
-        temperature: 0.4,
+        role: "summary",
         onText: job.stream(`arc:${arc.index}`, `第 ${arc.range[0]}~${arc.range[1]} 章分段摘要`),
         signal: job.signal,
       })
@@ -86,8 +83,7 @@ export async function summarizeArcs(id: string, job: Job, force = false) {
   job.log(`更新全书梗概（并入第 ${toMerge[0].range[0]}~${upTo} 章）`);
   const synopsis = (
     await chat(P.synopsisPrompt(n, toMerge), {
-      model: config.modelFast,
-      temperature: 0.4,
+      role: "summary",
       onText: job.stream("synopsis", "全书梗概"),
       signal: job.signal,
     })

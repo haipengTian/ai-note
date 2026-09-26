@@ -11,6 +11,9 @@ import { novelRoutes } from "./routes/novels.js";
 import { chapterRoutes } from "./routes/chapters.js";
 import { memoryRoutes } from "./routes/memory.js";
 import { jobRoutes } from "./routes/jobs.js";
+import { modelRoutes } from "./routes/models.js";
+import { ROLES, ROLE_INFO } from "./models.js";
+import { modelsView } from "./models-store.js";
 
 const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public");
 const MIME: Record<string, string> = {
@@ -20,7 +23,7 @@ const MIME: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
-const routes: Route[] = [...novelRoutes, ...chapterRoutes, ...memoryRoutes, ...jobRoutes];
+const routes: Route[] = [...novelRoutes, ...chapterRoutes, ...memoryRoutes, ...jobRoutes, ...modelRoutes];
 
 function send(res: http.ServerResponse, status: number, data: unknown) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -63,9 +66,17 @@ const server = http.createServer(async (req, res) => {
 server.listen(config.port, config.host, () => {
   console.log(`\n  📖 AI 小说工坊已启动`);
   console.log(`  ➜ 地址:  http://${config.host === "0.0.0.0" ? "localhost" : config.host}:${config.port}`);
-  console.log(`  ➜ 模型:  写作 ${config.model} · 记忆 ${config.modelMemory} · 审校 ${config.modelReview} · 摘要 ${config.modelFast}`);
-  console.log(`  ➜ 接口:  ${config.baseURL}`);
   console.log(`  ➜ 数据:  ${config.dataDir}`);
-  if (!config.apiKey) console.log(`  ⚠ 未设置 OPENAI_API_KEY：复制 .env.example 为 .env 并填写`);
+  try {
+    const v = modelsView();
+    console.log(`  ➜ 模型:  ${v.source === "file" ? v.file : "按 .env 推导（可在网页「模型设置」中修改）"}`);
+    for (const r of ROLES) {
+      const rc = v.roles[r];
+      const p = v.providers[rc.provider];
+      console.log(`     ${ROLE_INFO[r].label.padEnd(4, "　")}  ${rc.provider} / ${rc.model}${p.hasKey ? "" : `  ⚠ 未设置密钥 ${p.apiKeyEnv}`}`);
+    }
+  } catch (e) {
+    console.log(`  ⚠ ${(e as Error).message}`);
+  }
   console.log();
 });

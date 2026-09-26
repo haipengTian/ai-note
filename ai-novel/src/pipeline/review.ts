@@ -1,7 +1,6 @@
 /**
  * 审校与按意见修订。
  */
-import { config } from "../config.js";
 import { chat, chatJSON } from "../llm.js";
 import { ReviewSchema } from "../model/schemas.js";
 import type { Review, ReviewIssue } from "../model/types.js";
@@ -31,8 +30,7 @@ export async function reviewChapter(id: string, index: number, job: Job, autoRev
 
   job.log(`审校第 ${index} 章`);
   const raw = await chatJSON(messages, ReviewSchema, {
-    model: config.modelReview,
-    temperature: 0.3,
+    role: "review",
     onText: job.stream(`review:${index}`, `第 ${index} 章审校`),
     signal: job.signal,
   });
@@ -87,7 +85,7 @@ export async function reviseChapter(id: string, index: number, job: Job) {
   const messages = P.revisePrompt(compiled.text, n, c, text, issues, phrases);
   await saveContextRun(n, index, "revise", compiled, messages, job);
   const revised = cleanChapterText(
-    await chat(messages, { onText: job.stream(`chapter:${index}`, `修订第 ${index} 章`), signal: job.signal }),
+    await chat(messages, { role: "writer", onText: job.stream(`chapter:${index}`, `修订第 ${index} 章`), signal: job.signal }),
     c.title,
   );
   if (job.signal.aborted) return;

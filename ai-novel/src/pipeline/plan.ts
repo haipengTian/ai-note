@@ -1,7 +1,6 @@
 /**
  * 章节大纲规划。
  */
-import { config } from "../config.js";
 import { chatJSON } from "../llm.js";
 import { ChapterPlanSchema } from "../model/schemas.js";
 import type { Chapter } from "../model/types.js";
@@ -21,8 +20,7 @@ export async function planChapters(id: string, from: number, count: number, job:
   const to = from + size - 1;
   job.log(`规划第 ${from}~${to} 章大纲`);
   const res = await chatJSON(chapterPlanPrompt(n, from, size), ChapterPlanSchema, {
-    model: config.model,
-    temperature: 0.8,
+    role: "planner",
     onText: job.stream(`plan:${from}`, `第 ${from}~${to} 章大纲`),
     signal: job.signal,
   });

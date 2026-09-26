@@ -1,8 +1,11 @@
 /**
- * OpenAI 兼容 Chat Completions 客户端（零依赖，内置 fetch，流式）。
+ * OpenAI 兼容 Chat Completions 客户端（内置 fetch，流式）。
+ * 调用方只指定任务角色（writer / planner / review / memory / summary），
+ * 用哪家服务商、哪个模型、什么参数由模型配置决定（models.json 或 .env）。
  */
 import type { z, ZodTypeAny } from "zod";
-import { config } from "./config.js";
+import { buildBody, type ResolvedModel, type Role } from "./models.js";
+import { resolveModel } from "./models-store.js";
 
 export interface Msg {
   role: "system" | "user" | "assistant";
@@ -10,12 +13,12 @@ export interface Msg {
 }
 
 export interface ChatOptions {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
+  role: Role;
   /** 流式输出回调 */
   onText?: (delta: string) => void;
   signal?: AbortSignal;
+  /** 直接指定模型（测试连接用），不走角色配置 */
+  resolved?: ResolvedModel;
 }
 
 export interface Usage {
@@ -26,23 +29,20 @@ export interface Usage {
 /** 全局 token 统计（进程内） */
 export const usageTotal: Usage = { prompt: 0, completion: 0 };
 
-export async function chat(messages: Msg[], opt: ChatOptions = {}): Promise<string> {
-  const body = {
-    model: opt.model || config.model,
-    messages,
-    temperature: opt.temperature ?? config.temperature,
-    max_tokens: opt.maxTokens ?? config.maxTokens,
-    stream: true,
-    stream_options: { include_usage: true },
-  };
+const MAX_ATTEMPTS = 4;
+
+export async function chat(messages: Msg[], opt: ChatOptions): Promise<string> {
+  const m = opt.resolved ?? resolveModel(opt.role);
+  if (m.needsKey && !m.apiKey) throw new Error(`「${opt.role}」角色使用的服务商没有配置密钥，请到「模型设置」填写`);
+  const body = buildBody(m, messages);
 
   let res: Response | undefined;
   let lastErr = "";
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      res = await fetch(`${config.baseURL}/chat/completions`, {
+      res = await fetch(`${m.baseURL}/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        headers: { "Content-Type": "application/json", ...(m.apiKey ? { Authorization: `Bearer ${m.apiKey}` } : {}) },
         body: JSON.stringify(body),
         signal: opt.signal,
       });
@@ -57,7 +57,7 @@ export async function chat(messages: Msg[], opt: ChatOptions = {}): Promise<stri
     if (res.status !== 429 && res.status < 500) break;
     await sleep(1500 * 2 ** attempt, opt.signal);
   }
-  if (!res || !res.ok || !res.body) throw new Error(`模型接口请求失败：${lastErr.slice(0, 800)}`);
+  if (!res || !res.ok || !res.body) throw new Error(`模型接口请求失败（${m.model}）：${lastErr.slice(0, 800)}`);
 
   let text = "";
   const decoder = new TextDecoder();
@@ -92,6 +92,21 @@ export async function chat(messages: Msg[], opt: ChatOptions = {}): Promise<stri
   return text;
 }
 
+/** 测试某个模型能否连通：发一条极短的请求 */
+export async function testModel(m: ResolvedModel): Promise<{ ok: boolean; ms: number; reply?: string; error?: string }> {
+  const started = Date.now();
+  try {
+    const reply = await chat([{ role: "user", content: "请只回复：OK" }], {
+      role: m.role,
+      resolved: { ...m, maxTokens: Math.min(m.maxTokens, 32) },
+      signal: AbortSignal.timeout(30_000),
+    });
+    return { ok: true, ms: Date.now() - started, reply: reply.trim().slice(0, 100) };
+  } catch (e) {
+    return { ok: false, ms: Date.now() - started, error: (e as Error).message.slice(0, 500) };
+  }
+}
+
 /** 从模型输出中提取 JSON（兼容 ```json 代码块、前后多余文字） */
 export function extractJSON<T = any>(raw: string): T {
   let s = raw.trim();
@@ -113,10 +128,9 @@ export function extractJSON<T = any>(raw: string): T {
 }
 
 /** 要求模型输出 JSON 并按 schema 校验，解析或校验失败自动重试一次 */
-export async function chatJSON<S extends ZodTypeAny>(messages: Msg[], schema: S, opt: ChatOptions = {}): Promise<z.output<S>> {
-  const o = { model: config.modelFast, temperature: 0.5, ...opt };
+export async function chatJSON<S extends ZodTypeAny>(messages: Msg[], schema: S, opt: ChatOptions): Promise<z.output<S>> {
   const parse = (raw: string) => schema.parse(extractJSON(raw)) as z.output<S>;
-  const raw = await chat(messages, o);
+  const raw = await chat(messages, opt);
   try {
     return parse(raw);
   } catch (e) {
@@ -126,7 +140,7 @@ export async function chatJSON<S extends ZodTypeAny>(messages: Msg[], schema: S,
         { role: "assistant", content: raw },
         { role: "user", content: `你的输出无法被解析为符合要求的 JSON（${(e as Error).message.slice(0, 300)}）。请只输出合法的 JSON，不要任何解释。` },
       ],
-      { ...o, onText: undefined },
+      { ...opt, onText: undefined },
     );
     return parse(retry);
   }

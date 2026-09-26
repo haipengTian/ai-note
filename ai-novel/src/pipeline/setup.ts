@@ -1,7 +1,6 @@
 /**
  * 设定层：世界观、人物、总纲，以及新建作品后的一键生成。
  */
-import { config } from "../config.js";
 import { chat, chatJSON } from "../llm.js";
 import { CharactersSchema } from "../model/schemas.js";
 import { emptyState, type Character } from "../model/types.js";
@@ -12,7 +11,7 @@ import { planChapters, PLAN_BATCH } from "./plan.js";
 
 export async function genWorldview(id: string, extra: string, job: Job) {
   const n = await store.get(id);
-  const text = await chat(P.worldviewPrompt(n, extra), { onText: job.stream("worldview", "世界观设定"), signal: job.signal });
+  const text = await chat(P.worldviewPrompt(n, extra), { role: "planner", onText: job.stream("worldview", "世界观设定"), signal: job.signal });
   if (job.signal.aborted) return;
   await store.update(id, (x) => ({ ...x, worldview: text.trim() }));
   job.updated();
@@ -22,8 +21,7 @@ export async function genCharacters(id: string, extra: string, job: Job) {
   const n = await store.get(id);
   if (!n.worldview) job.log("还没有世界观设定，人物可能不够贴合，建议先生成设定", "warn");
   const res = await chatJSON(P.charactersPrompt(n, extra), CharactersSchema, {
-    model: config.model,
-    temperature: config.temperature,
+    role: "planner",
     onText: job.stream("characters", "人物设计"),
     signal: job.signal,
   });
@@ -55,7 +53,7 @@ export async function genCharacters(id: string, extra: string, job: Job) {
 
 export async function genOutline(id: string, extra: string, job: Job) {
   const n = await store.get(id);
-  const text = await chat(P.outlinePrompt(n, extra), { onText: job.stream("outline", "全书总纲"), signal: job.signal });
+  const text = await chat(P.outlinePrompt(n, extra), { role: "planner", onText: job.stream("outline", "全书总纲"), signal: job.signal });
   if (job.signal.aborted) return;
   await store.update(id, (x) => ({ ...x, outline: text.trim() }));
   job.updated();

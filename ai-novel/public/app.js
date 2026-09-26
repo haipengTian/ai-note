@@ -69,6 +69,7 @@ function parseRoute() {
     if (parts[2] === "ch" && parts[3]) return { page: "chapter", id: parts[1], index: Number(parts[3]) };
     return { page: "novel", id: parts[1], tab: parts[2] || "overview" };
   }
+  if (parts[0] === "models") return { page: "models" };
   return { page: "home" };
 }
 
@@ -93,6 +94,10 @@ async function route() {
       detachJob(true);
       state.novel = null;
       await renderHome();
+    } else if (state.route.page === "models") {
+      detachJob(true);
+      state.novel = null;
+      await renderModels();
     } else {
       if (!state.novel || state.novel.id !== state.route.id) {
         detachJob(true);
@@ -273,7 +278,7 @@ function overview() {
     ["chapters", "正文", written > 0, `${written} 章 · ${fmtWords(n.totalWords)}`],
   ];
   $("#main").innerHTML = `
-    ${state.info && !state.info.hasKey ? `<div class="warn-box">⚠ 服务端未配置 OPENAI_API_KEY，AI 生成将失败。请复制 .env.example 为 .env 并填写后重启。</div>` : ""}
+    ${modelWarning()}
     <div class="head"><h2>创作流程</h2></div>
     <div class="steps">
       ${steps.map(([tab, name, done, val], i) => `<a class="step ${done ? "done" : ""}" href="#/n/${n.id}/${tab}"><div class="n">第 ${i + 1} 步</div><div class="name">${name}</div><div class="val">${val}</div></a>`).join("")}
@@ -771,9 +776,20 @@ $("#jobToggle").onclick = () => setJobCollapsed(!$("#job").classList.contains("c
 $("#jobClose").onclick = () => $("#job").classList.add("hidden");
 
 // ================================================================ init
+/** 模型配置有误或缺少密钥时的提示 */
+function modelWarning() {
+  const i = state.info;
+  if (!i) return "";
+  if (i.modelsError) return `<div class="warn-box">⚠ ${esc(i.modelsError)}，<a href="#/models">去模型设置</a></div>`;
+  if (!i.hasKey) return `<div class="warn-box">⚠ 以下任务使用的模型还没有配置密钥：${esc(i.missingKeys.join("、"))}，AI 生成会失败。<a href="#/models">去模型设置</a></div>`;
+  return "";
+}
+
 async function refreshUsage() {
   state.info = await api("GET", "/api/info");
   $("#modelChip").textContent = state.info.model;
+  const roles = state.info.roles ? Object.entries(state.info.roles).map(([k, v]) => `${k}: ${v}`) : [];
+  $("#modelChip").title = [...roles, "", "点击打开模型设置"].join("\n");
   const u = state.info.usage;
   $("#usage").textContent = u.prompt || u.completion ? `本次运行 ${(u.prompt + u.completion).toLocaleString()} tokens` : "";
 }

@@ -2,7 +2,8 @@
  * 作品：列表、创建、读取、修改、删除、导出。
  */
 import { z } from "zod";
-import { config } from "../config.js";
+import { ROLES } from "../models.js";
+import { modelsView } from "../models-store.js";
 import { usageTotal } from "../llm.js";
 import { CharacterInputSchema, HookInputSchema } from "../model/schemas.js";
 import { emptyState, type Character, type Novel } from "../model/types.js";
@@ -82,15 +83,21 @@ export const novelRoutes: Route[] = [
   [
     "GET",
     /^\/api\/info$/,
-    async () => ({
-      model: config.model,
-      modelFast: config.modelFast,
-      modelReview: config.modelReview,
-      modelMemory: config.modelMemory,
-      baseURL: config.baseURL,
-      hasKey: Boolean(config.apiKey),
-      usage: usageTotal,
-    }),
+    async () => {
+      try {
+        const v = modelsView();
+        const missing = ROLES.filter((r) => !v.providers[v.roles[r].provider].hasKey).map((r) => v.roleInfo[r].label);
+        return {
+          model: v.roles.writer.model,
+          roles: Object.fromEntries(ROLES.map((r) => [r, `${v.roles[r].provider} / ${v.roles[r].model}`])),
+          hasKey: missing.length === 0,
+          missingKeys: missing,
+          usage: usageTotal,
+        };
+      } catch (e) {
+        return { model: "模型配置有误", modelsError: (e as Error).message, hasKey: false, missingKeys: [], usage: usageTotal };
+      }
+    },
   ],
 
   [

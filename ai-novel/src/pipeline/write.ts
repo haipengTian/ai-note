@@ -45,13 +45,13 @@ export async function writeChapter(id: string, index: number, extra: string, job
 
   job.log(`撰写第 ${index} 章《${chapter.title}》（上下文 ${compiled.chars} 字）`);
   const onText = job.stream(`chapter:${index}`, `第 ${index} 章 ${chapter.title}`);
-  let text = await chat(messages, { onText, signal: job.signal });
+  let text = await chat(messages, { role: "writer", onText, signal: job.signal });
   if (job.signal.aborted) return;
 
   if (countWords(text) < n.wordsPerChapter * MIN_RATIO) {
     job.log(`字数偏少（${countWords(text)}），自动续写`);
     onText("\n\n");
-    const more = await chat(P.continueChapterPrompt(n, chapter, text), { onText, signal: job.signal });
+    const more = await chat(P.continueChapterPrompt(n, chapter, text), { role: "writer", onText, signal: job.signal });
     if (job.signal.aborted) return;
     text = text.trimEnd() + "\n\n" + more.trim();
   }
@@ -75,7 +75,7 @@ export async function rewriteChapter(id: string, index: number, instruction: str
   const messages = P.rewritePrompt(compiled.text, n, chapter, old, instruction);
   await saveContextRun(n, index, "rewrite", compiled, messages, job);
   const text = cleanChapterText(
-    await chat(messages, { onText: job.stream(`chapter:${index}`, `修改第 ${index} 章`), signal: job.signal }),
+    await chat(messages, { role: "writer", onText: job.stream(`chapter:${index}`, `修改第 ${index} 章`), signal: job.signal }),
     chapter.title,
   );
   if (job.signal.aborted) return;

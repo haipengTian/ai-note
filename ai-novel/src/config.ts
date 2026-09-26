@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const envFile = path.resolve(process.cwd(), ".env");
+/** 启动时命令行/系统传入的环境变量（在读取 .env 之前拍下），优先级高于 .env */
+export const shellEnv: Record<string, string | undefined> = { ...process.env };
+
+// 读取 .env（Node >= 20.12 内置 process.loadEnvFile，无需 dotenv）
+export const envFile = path.resolve(process.cwd(), ".env");
 if (fs.existsSync(envFile)) {
   try {
     process.loadEnvFile(envFile);
@@ -15,20 +19,13 @@ function num(name: string, def: number): number {
   return Number.isFinite(v) && v > 0 ? v : def;
 }
 
+/** 运行配置。模型相关配置见 models.ts / models-store.ts（支持 models.json 和网页设置） */
 export const config = {
-  baseURL: (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, ""),
-  apiKey: process.env.OPENAI_API_KEY || "",
-  model: process.env.MODEL || "gpt-4.1",
-  modelFast: process.env.MODEL_FAST || process.env.MODEL || "gpt-4.1",
-  /** 审校用模型，默认与写作模型相同（审稿需要判断力，不建议用太弱的模型） */
-  modelReview: process.env.MODEL_REVIEW || process.env.MODEL || "gpt-4.1",
-  /** 章后记忆抽取用模型：决定长篇一致性，默认与写作模型相同 */
-  modelMemory: process.env.MODEL_MEMORY || process.env.MODEL || "gpt-4.1",
-  temperature: Number(process.env.TEMPERATURE ?? 0.85),
-  maxTokens: num("MAX_TOKENS", 8192),
   port: num("PORT", 3000),
   host: process.env.HOST || "127.0.0.1",
   dataDir: path.resolve(process.env.DATA_DIR || "./data"),
+  /** 模型配置文件；不存在时按 .env 里的 OPENAI_BASE_URL / MODEL 等推导 */
+  modelsFile: path.resolve(process.env.MODELS_FILE || "models.json"),
   /** 写作/审校时注入上下文的字符预算（中文约 1 字 ≈ 1 token） */
   contextBudget: num("CONTEXT_BUDGET", 60_000),
 };

@@ -263,3 +263,14 @@ table.list tr.clickable:hover td { background: var(--panel-2); cursor: pointer; 
 .list.trace td { padding: 3px 6px; }
 pre.prompt { white-space: pre-wrap; max-height: 360px; overflow: auto; font-size: 12px; background: var(--bg); padding: 8px; border-radius: 6px; }
 .char .row input.c-aliases { font-weight: normal; font-size: 13px; }
+
+/* ---------- 模型设置 ---------- */
+.models { max-width: 1000px; }
+.models code { font-size: 12px; background: var(--bg); padding: 1px 4px; border-radius: 4px; }
+.provider, .role { padding: 10px 0; border-top: 1px solid var(--border); }
+.provider:first-child, .role:first-child { border-top: 0; }
+.provider .row, .role .row { gap: 8px; flex-wrap: wrap; }
+.role textarea { width: 100%; font-family: var(--mono); font-size: 12px; }
+.ok-text { color: var(--ok); }
+a.chip { text-decoration: none; color: inherit; cursor: pointer; }
+.models select { width: auto; min-width: 120px; }
